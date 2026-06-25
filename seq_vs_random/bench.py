@@ -19,7 +19,7 @@ def run_compute(size, mode):
     print(f"COMPUTE_TIME:{t1-t0:.6f}")
     sys.exit(0)
 
-def run_scientific_benchmark():
+def run_benchmark():
     sizes = [10_000, 50_000, 100_000, 500_000, 1_000_000, 5_000_000, 10_000_000, 50_000_000, 100_000_000]
     modes = ["seq", "rand"]
     iterations = 10
@@ -110,4 +110,4 @@ if __name__ == "__main__":
     if args.run:
         run_compute(args.run, args.mode)
     else:
-        run_scientific_benchmark()
+        run_benchmark()
