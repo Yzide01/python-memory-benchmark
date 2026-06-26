@@ -1,0 +1,50 @@
+# started on Thu Jun 25 15:43:43 2026
+
+
+ Performance counter stats for './stream':
+
+          9,893.64 msec task-clock                       #    3.683 CPUs utilized             
+          9,893.60 msec cpu-clock                        #    3.683 CPUs utilized             
+                51      context-switches                 #    5.155 /sec                      
+                 0      cpu-migrations                   #    0.000 /sec                      
+           761,799      page-faults                      #   76.999 K/sec                     
+           761,799      minor-faults                     #   76.999 K/sec                     
+                 0      major-faults                     #    0.000 /sec                      
+    42,217,577,040      cycles                           #    4.267 GHz                         (38.41%)
+    23,221,899,289      instructions                     #    0.55  insn per cycle              (38.42%)
+   <not supported>      ref-cycles                                                            
+     3,232,531,828      branches                         #  326.728 M/sec                       (38.43%)
+       121,280,459      branch-misses                    #    3.75% of all branches             (38.44%)
+     3,755,759,539      cache-references                 #  379.614 M/sec                       (38.55%)
+        62,532,255      cache-misses                     #    1.66% of all cache refs           (38.56%)
+     8,261,383,176      L1-dcache-loads                  #  835.020 M/sec                       (38.55%)
+     1,649,722,223      L1-dcache-load-misses            #   19.97% of all L1-dcache accesses   (38.54%)
+   <not supported>      L1-dcache-stores                                                      
+   <not supported>      L1-dcache-store-misses                                                
+       718,077,316      L1-dcache-prefetches             #   72.580 M/sec                       (38.52%)
+   <not supported>      L1-dcache-prefetch-misses                                             
+   <not supported>      LLC-loads                                                             
+   <not supported>      LLC-load-misses                                                       
+   <not supported>      LLC-stores                                                            
+   <not supported>      LLC-store-misses                                                      
+   <not supported>      LLC-prefetches                                                        
+   <not supported>      LLC-prefetch-misses                                                   
+        28,429,027      dTLB-loads                       #    2.873 M/sec                       (38.51%)
+        28,161,174      dTLB-load-misses                 #   99.06% of all dTLB cache accesses  (38.49%)
+   <not supported>      dTLB-stores                                                           
+   <not supported>      dTLB-store-misses                                                     
+                49      iTLB-loads                       #    4.953 /sec                        (38.47%)
+           486,857      iTLB-load-misses                 # 993585.71% of all iTLB cache accesses  (38.43%)
+   <not supported>      node-loads                                                            
+   <not supported>      node-load-misses                                                      
+   <not supported>      node-stores                                                           
+   <not supported>      node-store-misses                                                     
+   <not supported>      node-prefetches                                                       
+   <not supported>      node-prefetch-misses                                                  
+
+       2.686104489 seconds time elapsed
+
+       8.703581000 seconds user
+       1.189806000 seconds sys
+
+
