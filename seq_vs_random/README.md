@@ -3,3 +3,5 @@ bench.py usage: sudo python bench.py
 
 plots.py usage: python plots.py --csv <csv_file> --metric <metric_name>
 (available metrics: L1_misses, IPC, LLC_misses. can add more by adding the metrics in bench.py line 26 using valid perf events)
+
+TODO: change the script so that we call perf on another script doing all the calculations to reduce the noise
