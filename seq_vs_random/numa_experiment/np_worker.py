@@ -22,21 +22,30 @@ def main():
 
     times = []
 
-    for _ in range(args.cycles):
-        os.kill(PARENT_PID, signal.SIGUSR1)
-        sleep(0.5)
-
-        t0 = perf_counter()
-        if args.mode == "rand":
+    if args.mode == "rand":
+        for _ in range(args.cycles):
+            os.kill(PARENT_PID, signal.SIGUSR1)
+            sleep(0.5)
+            
+            t0 = perf_counter()
             _ = np.sum(x[indices])
-        else:
+            t1 = perf_counter()
+            
+            os.kill(PARENT_PID, signal.SIGUSR2)
+            sleep(0.5)
+            times.append(t1 - t0)
+    else:
+        for _ in range(args.cycles):
+            os.kill(PARENT_PID, signal.SIGUSR1)
+            sleep(0.5)
+            
+            t0 = perf_counter()
             _ = np.sum(x)
-        t1 = perf_counter()
-
-        os.kill(PARENT_PID, signal.SIGUSR2)
-        sleep(0.5)
-
-        times.append(t1 - t0)
+            t1 = perf_counter()
+            
+            os.kill(PARENT_PID, signal.SIGUSR2)
+            sleep(0.5)
+            times.append(t1 - t0)
 
     print(f"PRINT: Time_s: {','.join([str(t) for t in times])}", flush=True)
     sys.exit(0)

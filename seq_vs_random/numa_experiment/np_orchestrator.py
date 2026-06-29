@@ -67,7 +67,7 @@ def run_experiment():
 
                 cmd = [
                     "numactl", f"--cpunodebind={node}", "--membind=0",
-                    sys.executable, "np_worker.py", 
+                    "python3.14", "np_worker.py", 
                     "--size", str(size), 
                     "--mode", mode, 
                     "--cycles", str(benchmark_cycles)
@@ -133,6 +133,7 @@ def run_experiment():
                     "size_MB": mb_size,
                     "mode": mode,
                     "time_s_mean": np.mean(time_array) if time_array else 0,
+                    "time_s_std": np.std(time_array) if time_array else 0,
                     "bandwidth_MB_s_mean": np.mean(run_bws) if run_bws else 0,
                     "bandwidth_MB_s_std": np.std(run_bws) if run_bws else 0,
                     "IPC_mean": np.mean(run_ipcs) if run_ipcs else 0,
