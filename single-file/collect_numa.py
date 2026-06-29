@@ -11,7 +11,6 @@ import numpy as np
 # 1. LE WORKER (Séquentiel vs Random)
 # ==========================================
 def worker(n_elements, pattern):
-    # On alloue toujours les deux pour garantir le même poids en RAM (16 octets/élém)
     data = np.ones(n_elements, dtype=np.float64)
     indices = np.random.randint(0, n_elements, size=n_elements, dtype=np.int64)
     
@@ -22,9 +21,9 @@ def worker(n_elements, pattern):
     
     for _ in range(5):
         if pattern == "sequential":
-            _ = data.sum() # Lecture linéaire optimisée par le prefetcher
+            _ = data.sum() 
         else:
-            _ = data[indices].sum() # Accès aléatoire qui casse le cache
+            _ = data[indices].sum() 
             
     t1 = time.perf_counter_ns()
     
@@ -41,11 +40,10 @@ def get_perf_val(output, event_name):
 def main():
     parser = argparse.ArgumentParser(description="Collecteur NUMA (Séquentiel vs Random)")
     parser.add_argument("--membind", type=str, default="0", help="Nœud mémoire fixe")
-    parser.add_argument("--num_nodes", type=int, default=8, help="Nombre de nœuds CPU à tester (0 à N-1)")
+    parser.add_argument("--num_nodes", type=int, default=8, help="Nombre de nœuds CPU à tester")
     parser.add_argument("--sizes", type=float, nargs='+', default=[7.6, 76.3, 381.5, 762.9], help="Tailles en Mo")
     parser.add_argument("--iter", type=int, default=3, help="Itérations pour l'écart-type")
     
-    # Arguments internes pour le worker
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--elements", type=int, help=argparse.SUPPRESS)
     parser.add_argument("--pattern", type=str, choices=["sequential", "random"], help=argparse.SUPPRESS)
@@ -58,16 +56,15 @@ def main():
 
     print(f"\n--- DÉMARRAGE DE LA COLLECTE NUMA | Membind: {args.membind} ---")
     
-    # 4 événements maximum pour éviter les "<not counted>" sur architecture hybride
-    events = "instructions,cycles,L1-dcache-load-misses,LLC-load-misses"
+    # Compteurs génériques Linux (Compatibles AMD EPYC)
+    events = "instructions,cycles,cache-references,cache-misses"
     bytes_per_row = 16 
 
-    # Ouverture du fichier CSV pour stocker les résultats
     csv_filename = f"results_numa_mem{args.membind}.csv"
     with open(csv_filename, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["Size_MB", "CPU_Node", "Pattern", "IPC_mean", "IPC_std", 
-                         "L1_Misses_mean", "L1_Misses_std", "LLC_Misses_mean", "LLC_Misses_std", 
+                         "Cache_Refs_mean", "Cache_Refs_std", "Cache_Misses_mean", "Cache_Misses_std", 
                          "Lat_ns_mean", "Lat_ns_std"])
 
         try:
@@ -79,7 +76,7 @@ def main():
                     for cpu_node in range(args.num_nodes):
                         print(f"  -> Pattern: {pattern:<10} | CPU_Node: {cpu_node} ...", end=" ", flush=True)
                         
-                        data_tmp = {"ipc": [], "l1": [], "llc": [], "lat": []}
+                        data_tmp = {"ipc": [], "refs": [], "misses": [], "lat": []}
                         
                         for _ in range(args.iter):
                             cmd_worker = f"sudo env LC_ALL=C numactl --cpubind={cpu_node} --membind={args.membind} {sys.executable} {__file__} --worker --elements {n_elements} --pattern {pattern.lower()}"
@@ -112,32 +109,3 @@ def main():
                                     lat_ns = float(line.strip().split(":")[1])
 
                             cycl = get_perf_val(perf_err, "cycles")
-                            inst = get_perf_val(perf_err, "instructions")
-                            l1 = get_perf_val(perf_err, "L1-dcache-load-misses")
-                            llc = get_perf_val(perf_err, "LLC-load-misses")
-                            
-                            data_tmp["ipc"].append(inst / cycl if cycl > 0 else 0)
-                            data_tmp["l1"].append(l1)
-                            data_tmp["llc"].append(llc)
-                            data_tmp["lat"].append(lat_ns)
-
-                        # Calcul Moyenne et Écart-type (std)
-                        writer.writerow([
-                            size_mo, cpu_node, pattern,
-                            np.mean(data_tmp["ipc"]), np.std(data_tmp["ipc"]),
-                            np.mean(data_tmp["l1"]), np.std(data_tmp["l1"]),
-                            np.mean(data_tmp["llc"]), np.std(data_tmp["llc"]),
-                            np.mean(data_tmp["lat"]), np.std(data_tmp["lat"])
-                        ])
-                        print("OK")
-                        
-        except KeyboardInterrupt:
-            print("\n[!] ARRÊT FORCÉ. Sauvegarde partielle du CSV effectuée.")
-            os.system("sudo pkill -f perf")
-            os.system("sudo pkill -f collect_numa.py")
-            sys.exit(1)
-
-    print(f"\n✅ Collecte terminée ! Résultats sauvegardés dans '{csv_filename}'.")
-
-if __name__ == "__main__":
-    main()
