@@ -47,7 +47,7 @@ def run_experiment():
     signal.signal(signal.SIGUSR1, start_perf_monitoring)
     signal.signal(signal.SIGUSR2, stop_perf_monitoring)
 
-    nodes = list(range(8))  # Tester sur NUMA 0 à 7
+    nodes = list(range(2))  # Tester sur NUMA 0 à 7
     sizes = [1_000_000, 10_000_000, 50_000_000, 100_000_000]
     modes = ["seq", "rand"]
     benchmark_cycles = 10
