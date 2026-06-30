@@ -6,6 +6,8 @@ import re
 import polars as pl
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import platform
 
 # ==========================================
 # 1. LE WORKER (Polars Cache-Aware)
@@ -111,46 +113,77 @@ def main():
         results["Branch_Misses"].append(np.mean(data_tmp["b_misses"]))
         results["lat_ns"].append(np.mean(data_tmp["lat"]))
 
-    csv_filename = f"benchmark_polars_m{args.membind}_c{args.cpubind}_{args.op}_{args.mode}.csv"
-    pl.DataFrame(results).write_csv(csv_filename)
-    print(f"\nData exported to: {csv_filename}")
-
     # ==========================================
-    # 3. TRACÉ DES GRAPHIQUES (Écriture Scientifique + Titre Commande)
+    # 3. TRACÉ DES GRAPHIQUES (Grille Asymétrique)
     # ==========================================
     print("\nGénération des graphiques...")
-    fig, axs = plt.subplots(5, 1, figsize=(12, 23), sharex=True)
     
-    # ---------------------------------------------------------
-    # NOUVEAU : Récupération de la commande exacte
-    # ---------------------------------------------------------
-    cmd_str = "python3 " + " ".join(sys.argv)
-    fig.suptitle(f"Commande d'exécution : {cmd_str}", fontsize=14, fontweight='bold', color='#333333')
+    # 1. Récupération automatique du nom de la machine (ex: sopnode-f3)
+    hostname = platform.node()
     
-    metrics = ["IPC", "Cache_Refs", "Cache_Misses", "Branch_Misses", "lat_ns"]
-    ylabels = ["IPC (Instructions/Cycle)", "Cache References", "Cache Misses", "Branch Misses", "Latence (ns)"]
-    colors = ['#2ca02c', '#1f77b4', '#d62728', '#e377c2', '#9467bd']
+    # 2. Construction du nouveau Super Titre détaillé
+    titre_principal = (
+        f"Analyse NUMA Polars | Machine : {hostname} | Opération : {args.op.upper()}\n"
+        f"Topologie -> CPU-Bind: Node {args.cpubind}  |  Mem-Bind: Node {args.membind}\n"
+        f"Balayage : de {args.min_mo} à {args.max_mo} Mo (Pas: {args.step_mo} Mo)  |  Limite L3 : {args.l3} Mo"
+    )
 
-    for i, m in enumerate(metrics):
-        axs[i].plot(results["Mo"], results[m], marker='o', linestyle='-', linewidth=2, color=colors[i])
-        axs[i].set_title(f"Évolution de {m}", fontsize=12, fontweight='bold')
-        axs[i].set_ylabel(ylabels[i], fontsize=10)
-        axs[i].grid(True, linestyle='--', alpha=0.7)
+    # Création d'une figure plus large pour accueillir les deux colonnes
+    fig = plt.figure(figsize=(16, 11))
+    fig.suptitle(titre_principal, fontsize=14, fontweight='bold', color='#2c3e50', y=0.98)
+
+    # 3. Définition de la grille 6x2
+    # La colonne de gauche aura 2 graphes (prenant 3 cases de haut chacun)
+    # La colonne de droite aura 3 graphes (prenant 2 cases de haut chacun)
+    gs = gridspec.GridSpec(6, 2, figure=fig)
+
+    # --- COLONNE GAUCHE ---
+    ax_lat = fig.add_subplot(gs[0:3, 0])
+    ax_miss = fig.add_subplot(gs[3:6, 0])
+
+    # --- COLONNE DROITE ---
+    ax_ipc = fig.add_subplot(gs[0:2, 1])
+    ax_ref = fig.add_subplot(gs[2:4, 1])
+    ax_branch = fig.add_subplot(gs[4:6, 1])
+
+    # Dictionnaire de configuration des graphes : (Axe, Métrique, Titre, Label_Y, Couleur)
+    plot_configs = [
+        (ax_lat, "lat_ns", "Latence d'exécution", "Latence (nanosecondes)", "#9467bd"),
+        (ax_miss, "Cache_Misses", "Défauts de Cache L3 (LLC Misses)", "Échecs au L3 (Nombre absolu)", "#d62728"),
+        (ax_ipc, "IPC", "Instructions Par Cycle (IPC)", "Instructions / Cycle (Ratio)", "#2ca02c"),
+        (ax_ref, "Cache_Refs", "Références au Cache L3 (LLC Refs)", "Accès au L3 (Nombre absolu)", "#1f77b4"),
+        (ax_branch, "Branch_Misses", "Erreurs de Prédiction de Branchement", "Erreurs de saut (Nombre absolu)", "#e377c2")
+    ]
+
+    # Application de la configuration
+    for ax, metric, title, ylabel, color in plot_configs:
+        ax.plot(results["Mo"], results[metric], marker='o', linestyle='-', linewidth=2, color=color)
+        ax.set_title(title, fontsize=12, fontweight='bold')
+        ax.set_ylabel(ylabel, fontsize=10, fontweight='medium')
+        ax.grid(True, linestyle='--', alpha=0.7)
         
-        # Force l'écriture scientifique (sauf pour l'IPC qui reste de 0 à ~3)
-        if m != "IPC":
-            axs[i].ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-            
-        axs[i].axvline(x=args.l3, color='red', linestyle='--', linewidth=2, label=f'Limite L3 ({args.l3} Mo)')
-        if i == 0: axs[i].legend()
+        # Ligne de démarcation L3
+        ax.axvline(x=args.l3, color='red', linestyle='--', linewidth=2, label=f'Limite L3 ({args.l3} Mo)')
+        
+        # Écriture scientifique partout sauf pour l'IPC
+        if metric != "IPC":
+            ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+        else:
+            ax.ticklabel_format(style='plain', axis='y')
+            # On place la légende L3 uniquement sur le premier graphique pour épurer le reste
+            ax.legend(loc='lower right')
 
-    axs[-1].set_xlabel("Taille mémoire du DataFrame (Mo)", fontsize=12, fontweight='bold')
-    axs[-1].ticklabel_format(style='plain', axis='x')
+    # 4. Labels de l'axe X (uniquement sur les graphes tout en bas de chaque colonne)
+    ax_miss.set_xlabel("Taille mémoire du DataFrame (Mo)", fontsize=12, fontweight='bold')
+    ax_branch.set_xlabel("Taille mémoire du DataFrame (Mo)", fontsize=12, fontweight='bold')
 
-    # On utilise rect pour laisser de la place au Super Titre (suptitle) tout en haut
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
-    plt.savefig(f"benchmark_polars_{args.op}_{args.mode}.png", dpi=300)
-    print("Terminé !")
+    # Ajustement global pour éviter les chevauchements
+    plt.tight_layout(rect=[0, 0, 1, 0.94])
+    
+    # Sauvegarde avec un nom qui inclut la machine
+    output_filename = f"benchmark_polars_{args.op}_c{args.cpubind}m{args.membind}_{hostname}.png"
+    plt.savefig(output_filename, dpi=300, bbox_inches='tight')
+    print(f"✅ Graphique généré : {output_filename}")
 
 if __name__ == "__main__":
     main()
