@@ -111,6 +111,10 @@ def main():
         results["Branch_Misses"].append(np.mean(data_tmp["b_misses"]))
         results["lat_ns"].append(np.mean(data_tmp["lat"]))
 
+    csv_filename = f"benchmark_polars_m{args.membind}_c{args.cpubind}_{args.op}_{args.mode}.csv"
+    pl.DataFrame(results).write_csv(csv_filename)
+    print(f"\nData exported to: {csv_filename}")
+
     # ==========================================
     # 3. TRACÉ DES GRAPHIQUES (Écriture Scientifique + Titre Commande)
     # ==========================================
