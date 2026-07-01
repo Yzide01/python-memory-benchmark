@@ -113,6 +113,10 @@ def main():
         results["Branch_Misses"].append(np.mean(data_tmp["b_misses"]))
         results["lat_ns"].append(np.mean(data_tmp["lat"]))
 
+    csv_filename = f"benchmark_polars_m{args.membind}c{args.cpubind}_{args.op}_{args.mode}.csv"
+    pl.DataFrame(results).write_csv(csv_filename)
+    print(f"\nDonnées exportées avec succès dans : {csv_filename}")
+
     # ==========================================
     # 3. TRACÉ DES GRAPHIQUES (Grille Asymétrique)
     # ==========================================
