@@ -14,6 +14,7 @@ def main():
     parser.add_argument("--cpubind", type=str, default="?", help="CPU node used")
     parser.add_argument("--membind", type=str, default="?", help="Memory node used")
     parser.add_argument("--machine", type=str, default="", help="Machine name")
+    parser.add_argument("--streaming", action="store_true", help="Active le streaming engine de Polars")
 
     args = parser.parse_args()
 
@@ -31,11 +32,18 @@ def main():
     min_mo = df["Mo"].min()
     max_mo = df["Mo"].max()
     
-    main_title = (
-        f"NUMA STREAMING Analysis | Machine: {hostname} | Operation: {args.op.upper()}\n"
-        f"Topology -> CPU-Bind: Node {args.cpubind}  |  Mem-Bind: Node {args.membind}\n"
-        f"Sweep: from {min_mo} to {max_mo} MB  |  L3 Limit: {args.l3} MB"
-    )
+    if args.streaming:
+        main_title = (
+            f"NUMA STREAMING Analysis | Machine: {hostname} | Operation: {args.op.upper()}\n"
+            f"Topology -> CPU-Bind: Node {args.cpubind}  |  Mem-Bind: Node {args.membind}\n"
+            f"Sweep: from {min_mo} to {max_mo} MB  |  L3 Limit: {args.l3} MB"
+        )
+    else: 
+        main_title = (
+            f"NUMA NO STREAMING Analysis | Machine: {hostname} | Operation: {args.op.upper()}\n"
+            f"Topology -> CPU-Bind: Node {args.cpubind}  |  Mem-Bind: Node {args.membind}\n"
+            f"Sweep: from {min_mo} to {max_mo} MB  |  L3 Limit: {args.l3} MB"
+        )
 
     # 3. Initialize asymmetric grid (16x11)
     fig = plt.figure(figsize=(16, 11))
