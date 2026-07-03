@@ -219,7 +219,7 @@ def main():
     axs[-1].ticklabel_format(style='plain', axis='x')
 
     plt.tight_layout()
-    plt.savefig(f"benchmark_polars_{args.op}_{args.mode}_{stream_suffix}.png", dpi=300)
+    plt.savefig(f"benchmark_polars_{args.op}_{args.mode}_{stream_suffix}_m{args.membind}_c{args.cpubind}.png", dpi=300)
     print("Terminé !")
 
 if __name__ == "__main__":
