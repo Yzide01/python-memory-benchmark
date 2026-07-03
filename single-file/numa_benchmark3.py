@@ -1,7 +1,7 @@
 import sys
 import os
 
-temp_threads = 1
+temp_threads = "1"
 if "-t" in sys.argv:
     temp_threads = sys.argv[sys.argv.index("-t") + 1]
 elif "--threads" in sys.argv:
@@ -199,6 +199,8 @@ def main():
             for line in iter(proc.stdout.readline, ""):
                 if line.startswith("PRINT: Time_s:"):
                     time_s = float(line.split(":")[2].strip())
+                else:
+                    print("  [Worker] " + line.strip(), flush=True)
             
             proc.wait()
             
