@@ -299,7 +299,7 @@ def main():
 
     # CSV SAVING + GRAPHS
     stream_suffix = "streaming" if args.streaming else "eager"
-    csv_filename = f"benchmark_polars_{args.op}_{args.mode}_{stream_suffix}_t{args.threads}.csv"
+    csv_filename = f"benchmark_polars_{args.op}_{args.mode}_{stream_suffix}_t{args.threads}_m{args.membind}.csv"
     pl.DataFrame(results).write_csv(csv_filename)
     print(f"\nDonnées exportées avec succès dans : {csv_filename}")
 
