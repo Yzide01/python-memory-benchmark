@@ -138,6 +138,7 @@ def main():
     parser.add_argument("--mode", type=str, choices=["local", "numa"], default="local")
     parser.add_argument("--cpubind", type=str, default="0")
     parser.add_argument("--membind", type=str, default="0")
+    parser.add_argument("--physcpubind", type=str, default=None, help="Coeurs physiques isolés (ex: '28-31' ou '60,61,62,63')")
     parser.add_argument("--op", type=str, choices=["join", "grpby"], default="grpby")
     parser.add_argument("--l3", type=float, default=32.0) # (sopnode f1 is 32, sopnode f3 is 60)
     parser.add_argument("--iter", type=int, default=3)
@@ -179,9 +180,11 @@ def main():
         print(f"Test avec {n:,} éléments (~{size_mo:.1f} Mo)...")
         
         if args.mode == "local":
-            cmd = ["taskset", "-c", "0", sys.executable, __file__, "--worker", "--op", args.op, "--elements", str(n), f"--threads={args.threads}"]
+            cores = args.physcpubind if args.physcpubind else "0"
+            cmd = ["taskset", "-c", cores, sys.executable, __file__, "--worker", "--op", args.op, "--elements", str(n), "--threads", str(args.threads)]
         else:
-            cmd = ["numactl", f"--cpubind={args.cpubind}", f"--membind={args.membind}", sys.executable, __file__, "--worker", "--op", args.op, "--elements", str(n), f"--threads={args.threads}"]
+            cpu_flag = f"--physcpubind={args.physcpubind}" if args.physcpubind else f"--cpubind={args.cpubind}"
+            cmd = ["numactl", cpu_flag, f"--membind={args.membind}", sys.executable, __file__, "--worker", "--op", args.op, "--elements", str(n), "--threads", str(args.threads)]
         
         if args.streaming:
             cmd.append("--streaming")
