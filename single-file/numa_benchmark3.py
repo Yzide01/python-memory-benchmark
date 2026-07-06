@@ -44,13 +44,53 @@ def stop_perf_monitoring(signum, frame):
         _, perf_stderr_output = perf_process.communicate()
         perf_process = None
 
+def pin_polars_threads(start_core: int) -> None:
+    pid = os.getpid()
+    task_dir = f"/proc/{pid}/task"
+    current_polars_core = start_core
+
+    try:
+        tids = os.listdir(task_dir)
+    except FileNotFoundError:
+        print(f"  [Worker] Erreur : Dossier {task_dir} introuvable.")
+        return
+
+    for tid_str in tids:
+        tid = int(tid_str)
+        if tid == pid:
+            thread_name = "main_python_thread"
+        else:
+            try:
+                with open(f"{task_dir}/{tid}/comm", "r") as f:
+                    thread_name = f.read().strip()
+            except FileNotFoundError:
+                continue
+
+        # On cherche uniquement les sous-threads de calcul Polars
+        if "polars" in thread_name and "polars-ooc-clea" not in thread_name:
+            target_core = str(current_polars_core)
+            print(f"  [Worker] Épinglage du thread '{thread_name}' (TID {tid}) sur le cœur {target_core}")
+            current_polars_core += 1
+
+            try:
+                subprocess.run(
+                    ["taskset", "-p", "-c", target_core, str(tid)],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                )
+            except Exception as e:
+                print(f"  [Worker] Erreur d'épinglage : {e}")
+
 # Worker called by the orchestrator 
 # Does the benchmark, sends signal to start perf monitoring as soon as needed
-def worker(op, n_elements, streaming):
+def worker(op, n_elements, streaming, start_core):
     PARENT_PID = os.getppid()
     
     # disable garbage collector before
     gc.disable()
+
+    if start_core is not None:
+        pin_polars_threads(start_core)
 
     # Étape 1 : Génération des données (NON mesurée par perf)
 
@@ -138,6 +178,7 @@ def main():
     parser.add_argument("--mode", type=str, choices=["local", "numa"], default="local")
     parser.add_argument("--cpubind", type=str, default="0")
     parser.add_argument("--membind", type=str, default="0")
+    parser.add_argument("--start_core", type=int, default=None, help="Cœur de départ pour le thread pinning individuel")
     parser.add_argument("--physcpubind", type=str, default=None, help="Coeurs physiques isolés (ex: '28-31' ou '60,61,62,63')")
     parser.add_argument("--op", type=str, choices=["join", "grpby"], default="grpby")
     parser.add_argument("--l3", type=float, default=32.0) # (sopnode f1 is 32, sopnode f3 is 60)
@@ -156,7 +197,7 @@ def main():
     args = parser.parse_args()
 
     if args.worker:
-        worker(args.op, args.elements, args.streaming)
+        worker(args.op, args.elements, args.streaming, args.start_core)
         return
 
     # Enregistrement des signaux
@@ -178,14 +219,23 @@ def main():
     for n in sizes:
         size_mo = (n * bytes_per_row) / (1024 * 1024)
         print(f"Test avec {n:,} éléments (~{size_mo:.1f} Mo)...")
+
+# Choix dynamique du paramètre CPU
+        cmd_base = [sys.executable, __file__, "--worker", "--op", args.op, "--elements", str(n), "--threads", str(args.threads)]
         
+        # On passe le start_core au worker s'il est fourni
+        if args.start_core is not None:
+            cmd_base.extend(["--start_core", str(args.start_core)])
+
         if args.mode == "local":
             cores = args.physcpubind if args.physcpubind else "0"
-            cmd = ["taskset", "-c", cores, sys.executable, __file__, "--worker", "--op", args.op, "--elements", str(n), "--threads", str(args.threads)]
+            cmd = ["taskset", "-c", cores] + cmd_base
         else:
-            cpu_flag = f"--physcpubind={args.physcpubind}" if args.physcpubind else f"--cpubind={args.cpubind}"
-            cmd = ["numactl", cpu_flag, f"--membind={args.membind}", sys.executable, __file__, "--worker", "--op", args.op, "--elements", str(n), "--threads", str(args.threads)]
-        
+            if args.physcpubind:
+                cmd = ["taskset", "-c", args.physcpubind, "numactl", f"--membind={args.membind}"] + cmd_base
+            else:
+                cmd = ["numactl", f"--cpubind={args.cpubind}", f"--membind={args.membind}"] + cmd_base
+          
         if args.streaming:
             cmd.append("--streaming")
             
