@@ -152,13 +152,13 @@ def worker(op, n_elements, streaming, start_core):
 
     if op == "grpby":
         t0 = time.perf_counter()
-        #df.group_by("key").sum()
-        df.lazy().group_by("key").agg(pl.col("a").sum()).collect()
+        df.group_by("key").sum()
+        #df.lazy().group_by("key").agg(pl.col("a").sum()).collect()
         t1 = time.perf_counter()
     elif op == "join":
         t0 = time.perf_counter()
-        #df.join(df2, on="key", how="left").sum()
-        df.lazy().join(df2.lazy(), on="key", how="left").collect()
+        df.join(df2, on="key", how="left").sum()
+        #df.lazy().join(df2.lazy(), on="key", how="left").collect()
         t1 = time.perf_counter()
     
     # Étape 4 : Signal de fin
