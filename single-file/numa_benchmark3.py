@@ -141,7 +141,13 @@ def worker(op, n_elements, streaming, start_core):
         )
         df = df.sort("key")
         df2 = df2.sort("key")
- 
+
+    if not df["key"].is_sorted():
+        print("DataFrame is not sorted as expected", extra={"tag": "BENCHMARK"})
+        # check where the issue is
+        print("df a sorted: %s, df key sorted: %s",df["a"].is_sorted(), df["key"].is_sorted())
+    #else:
+        #print("data is sorted")
     # Étape 2 : Signal de départ pour perf
     os.kill(PARENT_PID, signal.SIGUSR1)
     time.sleep(0.5) # Le temps que perf s'attache
