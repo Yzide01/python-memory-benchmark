@@ -1,0 +1,87 @@
+for t in 1 2 3 4; do
+    if [ "$t" -eq 1 ]; then
+        cores="1"
+    else
+        cores="1-$t"
+    fi
+
+    echo "================================================="
+    echo "▶️ TEST LOCAL EAGER (CPU $cores ➔ RAM 0) | $t THREAD(S)"
+    echo "================================================="
+    
+    sudo python3.14 numa_benchmark3.py \
+        --mode numa \
+        --physcpubind $cores \
+        --membind 0 \
+        --op join \
+        --l3 32.0 \
+        --min_mo 2000 --max_mo 8000 --step_mo 2000 \
+        --threads $t
+done
+
+
+for t in 1 2 3 4; do
+    if [ "$t" -eq 1 ]; then
+        cores="1"
+    else
+        cores="1-$t"
+    fi
+
+    echo "================================================="
+    echo "▶️ TEST LOCAL EAGER (CPU $cores ➔ RAM 0) | $t THREAD(S)"
+    echo "================================================="
+    
+    sudo python3.14 numa_benchmark3.py \
+        --mode numa \
+        --physcpubind $cores \
+        --membind 1 \
+        --op join \
+        --l3 32.0 \
+        --min_mo 2000 --max_mo 8000 --step_mo 2000 \
+        --threads $t
+done
+
+
+for t in 1 2 3 4; do
+    if [ "$t" -eq 1 ]; then
+        cores="1"
+    else
+        cores="1-$t"
+    fi
+
+    echo "================================================="
+    echo "▶️ TEST LOCAL EAGER (CPU $cores ➔ RAM 0) | $t THREAD(S)"
+    echo "================================================="
+    
+    sudo python3.14 numa_benchmark3.py \
+        --mode numa \
+        --physcpubind $cores \
+        --membind 0 \
+        --op grpby \
+        --l3 32.0 \
+        --min_mo 2000 --max_mo 8000 --step_mo 2000 \
+        --threads $t
+done
+
+
+
+for t in 1 2 3 4; do
+    if [ "$t" -eq 1 ]; then
+        cores="1"
+    else
+        cores="1-$t"
+    fi
+
+    echo "================================================="
+    echo "▶️ TEST LOCAL EAGER (CPU $cores ➔ RAM 0) | $t THREAD(S)"
+    echo "================================================="
+    
+    sudo python3.14 numa_benchmark3.py \
+        --mode numa \
+        --physcpubind $cores \
+        --membind 1 \
+        --op grpby \
+        --l3 32.0 \
+        --min_mo 2000 --max_mo 8000 --step_mo 2000 \
+        --threads $t
+done
