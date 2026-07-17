@@ -2,41 +2,58 @@ import polars as pl
 import time
 import gc
 
-def micro_bench_sums(size_gb=2.0):
-    bytes_per_row = 8 # 4 bytes pour 'a' (UInt32) + 4 bytes pour 'key' (UInt32)
+def micro_bench_chunks(size_gb=2.0, n_chunks=100):
+    # 4 octets pour 'a' + 4 octets pour 'key' = 8 octets par ligne
+    bytes_per_row = 8 
     elements = int((size_gb * 1024 * 1024 * 1024) / bytes_per_row)
     
-    print(f"--- MICRO-BENCHMARK: {size_gb} Go ({elements:,} lignes) ---")
+    print(f"\n=========================================================")
+    print(f" 📊 MICRO-BENCHMARK: {size_gb} Go ({elements:,} lignes) | {n_chunks} Blocs")
+    print(f"=========================================================")
     
-    # Génération de la colonne de calcul
-    df_base = pl.DataFrame({"a": pl.int_range(0, elements, dtype=pl.UInt32, eager=True)})
+    # Génération et tri (pour correspondre exactement à ton cas réel)
+    df = pl.DataFrame({
+        "a": pl.int_range(0, elements, dtype=pl.UInt32, eager=True),
+        "key": pl.int_range(0, elements, dtype=pl.UInt32, eager=True) % n_chunks
+    }).sort("key")
     
-    # TEST 1 : Somme globale (Le processeur va tout droit, sans réfléchir)
+    # ---------------------------------------------------------
+    # TEST 1 : Somme globale (Le processeur lit tout d'un coup)
+    # ---------------------------------------------------------
     gc.collect()
     t0 = time.perf_counter()
-    _ = df_base["a"].sum()
+    _ = df["a"].sum()
     t1 = time.perf_counter()
-    print(f"1. Somme globale (1 tableau)     : {t1-t0:.5f} secondes")
+    print(f"1. Somme globale (1 seul bloc)        : {t1-t0:.5f} secondes")
     
-    # TEST 2 : Modulo 2 (Séparation en 2 gros blocs)
-    df_mod2 = df_base.with_columns((pl.col("a") % 2).alias("key")).sort("key")
+    # ---------------------------------------------------------
+    # TEST 2 : Somme fragmentée (n * sum(total/n))
+    # ---------------------------------------------------------
     gc.collect()
+    chunk_size = elements // n_chunks
     t0 = time.perf_counter()
-    _ = df_mod2.group_by("key").sum()
+    
+    res_chunks = 0
+    for i in range(n_chunks):
+        # On découpe physiquement le tableau en n morceaux
+        chunk = df.slice(i * chunk_size, chunk_size)
+        res_chunks += chunk["a"].sum()
+        
     t1 = time.perf_counter()
-    print(f"2. Somme GroupBy (Modulo 2)      : {t1-t0:.5f} secondes")
+    print(f"2. Sommes manuelles ({n_chunks} blocs)        : {t1-t0:.5f} secondes")
 
-    # TEST 3 : Modulo 100 (Séparation en 100 petits blocs)
-    df_mod100 = df_base.with_columns((pl.col("a") % 100).alias("key")).sort("key")
+    # ---------------------------------------------------------
+    # TEST 3 : Somme via GroupBy (La méthode de ton orchestrateur)
+    # ---------------------------------------------------------
     gc.collect()
     t0 = time.perf_counter()
-    _ = df_mod100.group_by("key").sum()
+    _ = df.group_by("key").sum()
     t1 = time.perf_counter()
-    print(f"3. Somme GroupBy (Modulo 100)    : {t1-t0:.5f} secondes")
-    
-    print("-" * 50)
+    print(f"3. Somme GroupBy (modulo {n_chunks})          : {t1-t0:.5f} secondes")
+
 
 if __name__ == "__main__":
-    # Tu peux tester la bascule de 6 à 8 Go ici
-    micro_bench_sums(size_gb=6.0)
-    micro_bench_sums(size_gb=8.0)
+    # Test avec la bascule critique observée (6 Go vs 8 Go)
+    # Tu peux modifier n_chunks pour tester modulo 2 vs modulo 100
+    micro_bench_chunks(size_gb=6.0, n_chunks=100)
+    micro_bench_chunks(size_gb=8.0, n_chunks=100)
